@@ -13,6 +13,8 @@ main =
        do getCommonNodeNamesExceptBepa cepaButNoBepa cepaButNoBepa `shouldBe` []
       it "Returns all names found in both trees that doesn't contain 'bepa'" $ do
         property $ prop_returnsAllNamesFoundInBothTrees
+      it "Does not return any name containing 'bepa' no matter the case" $ do
+        property $ prop_filtersAllBepaNames
 
 cepaButNoBepa :: Tree
 cepaButNoBepa =
@@ -21,7 +23,7 @@ cepaButNoBepa =
 prop_returnsAllNamesFoundInBothTrees :: Property
 prop_returnsAllNamesFoundInBothTrees =
   forAll
-    genNodeNames
+    (vectorOf 8 genNodeName)
     (\nns -> do
        t1 <- genTreeFromNodeNames nns
        t2 <- genTreeFromNodeNames nns
@@ -29,11 +31,15 @@ prop_returnsAllNamesFoundInBothTrees =
        let combined = getCommonNodeNamesExceptBepa t1 t2
        return $ combined == distincNames)
 
-nodeNamesToGenerate :: Int
-nodeNamesToGenerate = 8
-
-genNodeNames :: Gen [NodeName]
-genNodeNames = vectorOf nodeNamesToGenerate genNodeName
+prop_filtersAllBepaNames :: Property
+prop_filtersAllBepaNames =
+  forAll
+    (vectorOf 8 genSneakyBepaNodeName)
+    (\bns -> do
+       t1 <- genTreeFromNodeNames bns
+       t2 <- genTreeFromNodeNames bns
+       let combined = getCommonNodeNamesExceptBepa t1 t2
+       return $ combined == [])
 
 genNodeName :: Gen NodeName
 genNodeName = do
@@ -42,6 +48,16 @@ genNodeName = do
   return $ NodeName [f, s] -- 4 x 4 = 16 permutations
   where
     genChar = elements ['a' .. 'd']
+
+genSneakyBepaNodeName :: Gen NodeName
+genSneakyBepaNodeName = do
+  prefix <- arbitrary
+  b <- elements ['b', 'B']
+  e <- elements ['e', 'E']
+  p <- elements ['p', 'P']
+  a <- elements ['a', 'A']
+  postfix <- arbitrary
+  return $ NodeName $ prefix ++ [b, e, p, a] ++ postfix
 
 genTreeFromNodeNames :: [NodeName] -> Gen Tree -- wet, should reuse genTreeWith. Hard since typeB can't have typeA children
 genTreeFromNodeNames [] =
