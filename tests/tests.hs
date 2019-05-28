@@ -15,6 +15,8 @@ main =
         property $ prop_returnsAllNamesFoundInBothTrees
       it "Does not return any name containing 'bepa' no matter the case" $ do
         property $ prop_filtersAllBepaNames
+      it "Lets non-bepa names through even though all bepa names are filtered" $ do
+        property $ prop_letsNamesThroughSelectively
 
 cepaButNoBepa :: Tree
 cepaButNoBepa =
@@ -40,6 +42,18 @@ prop_filtersAllBepaNames =
        t2 <- genTreeFromNodeNames bns
        let combined = getCommonNodeNamesExceptBepa t1 t2
        return $ combined == [])
+
+prop_letsNamesThroughSelectively :: Property
+prop_letsNamesThroughSelectively =
+  forAll
+    (vectorOf 5 genNodeName)
+    (\nns -> do
+       bns <- (vectorOf 3 genSneakyBepaNodeName)
+       t1 <- genTreeFromNodeNames $ nns ++ bns
+       t2 <- genTreeFromNodeNames $ bns ++ nns
+       let distincNames = nub nns
+       let combined = getCommonNodeNamesExceptBepa t1 t2
+       return $ combined == distincNames)
 
 genNodeName :: Gen NodeName
 genNodeName = do
